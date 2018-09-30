@@ -20,8 +20,15 @@ import numpy as np
 
 #for model
 from keras.models import load_model
-
-
+from python_speech_features import mfcc
+from python_speech_features import delta
+from python_speech_features import logfbank
+from scipy.io.wavfile import read
+import scipy.io.wavfile as wav
+import numpy as np
+import librosa
+import tensorflow as tf
+model = 0
 # Create your views here.
 def home(request):
     # ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '')
@@ -39,8 +46,9 @@ def upload_file(request):
         print("post")
         form = UploadFileForm(request.POST, request.FILES)
         # print request.FILES['file'].name
-        handle_uploaded_file(request.FILES['file'],request.FILES['file'].name)
-        print("we got a file")
+        intent = handle_uploaded_file(request.FILES['file'],request.FILES['file'].name)
+        # intent = '1'
+        print("we got a file")  
         # if form.is_valid():
         #     print("valid")
         #     handle_uploaded_file(request.FILES['file'])
@@ -48,7 +56,7 @@ def upload_file(request):
     else:
         form = UploadFileForm()
 #     return render(request, 'upload.html', {'form': form})
-    return HttpResponse("Hello World!")
+    return HttpResponse(intent)
 
 def handle_uploaded_file(f,n):
     print "in hndling upload"
@@ -60,7 +68,10 @@ def handle_uploaded_file(f,n):
         print "done saving"
     # converting
     converter(fname)
-    mfcc_gen(fname)
+    intent = getIntent(fname)
+    print ("Intent is")
+    print(intent)
+    return intent
 
 def converter(fname):
     print(fname.split('.')[0])
@@ -85,12 +96,57 @@ def write_mffcc(mfcc_f):
     with open("mfcc.txt", 'wb+') as destination:
         destination.write("%s " % mfcc_f)
         print "done saving mffc features as a text"
-def test(fname):
-    from scipy.io.wavfile import _read_riff_chunk
-    from os.path import getsize
+# def test(fname):
+#     from scipy.io.wavfile import _read_riff_chunk
+#     from os.path import getsize
 
-    with open(filename, 'rb') as f:
-        riff_size, _ = _read_riff_chunk(f)
+#     with open(filename, 'rb') as f:
+#         riff_size, _ = _read_riff_chunk(f)
 
-    print('RIFF size: {}'.format(riff_size))
-    print('os size:   {}'.format(getsize(filename)))
+#     print('RIFF size: {}'.format(riff_size))
+#     print('os size:   {}'.format(getsize(filename)))
+
+def getIntent(fname):
+    global model
+    if (model == 0) :
+        model = load_model('model/71_%.hd5')
+        graph = tf.get_default_graph()
+        maxSize= 949
+        wave, sr = librosa.load("audio/wav/"+fname.split('.')[0]+".wav", mono=True, sr=None)
+        trimmed, index = librosa.effects.trim(wave,top_db=40,frame_length=10, hop_length=2)
+        mfcc1 = mfcc(trimmed,sr,0.025,0.01,13,26,1200)
+        print(mfcc1.shape[0])
+        #padding 
+        if (maxSize > mfcc1.shape[0]):
+            b=np.zeros((maxSize, 13))
+            result= np.zeros(b.shape)
+            result[:mfcc1.shape[0],:mfcc1.shape[1]] = mfcc1
+            mfcc_f=result.ravel()
+            global graph
+            with graph.as_default():
+                intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
+                return intent
+        else:
+            return "-1"
+
+    else:
+        maxSize= 949
+        wave, sr = librosa.load("audio/wav/"+fname.split('.')[0]+".wav", mono=True, sr=None)
+        trimmed, index = librosa.effects.trim(wave,top_db=40,frame_length=10, hop_length=2)
+        mfcc1 = mfcc(trimmed,sr,0.025,0.01,13,26,1200)
+        print(mfcc1.shape[0])
+        #padding 
+        if (maxSize > mfcc1.shape[0]):
+            b=np.zeros((maxSize, 13))
+            result= np.zeros(b.shape)
+            result[:mfcc1.shape[0],:mfcc1.shape[1]] = mfcc1
+            mfcc_f=result.ravel()
+            global graph
+            with graph.as_default():
+                intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
+                return intent
+        else:
+            return "-1"
+
+
+    

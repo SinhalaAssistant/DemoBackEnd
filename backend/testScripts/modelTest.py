@@ -22,6 +22,6 @@ if (maxSize > mfcc1.shape[0]):
     result[:mfcc1.shape[0],:mfcc1.shape[1]] = mfcc1
     mfcc_f=result.ravel()
     print(mfcc_f.shape)
-    model.predict_classes(mfcc_f)
-
+    intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0])
+    
 #end of padding
