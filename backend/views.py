@@ -18,6 +18,11 @@ from scipy.io.wavfile import read
 import scipy.io.wavfile as wav
 import numpy as np
 
+#Voice to Text
+import IntentClasify
+import librosa
+import soundfile
+
 #for model
 from keras.models import load_model
 from python_speech_features import mfcc
@@ -45,8 +50,8 @@ def upload_file(request):
     if request.method == 'POST':
         print("post")
         form = UploadFileForm(request.POST, request.FILES)
-        # print request.FILES['file'].name
-        intent = handle_uploaded_file(request.FILES['file'],request.FILES['file'].name)
+        print (request.POST.get("type"))
+        intent = handle_uploaded_file(request.FILES['file'],request.FILES['file'].name,request.POST.get("type"))
         # intent = '1'
         print("we got a file")  
         # if form.is_valid():
@@ -58,7 +63,7 @@ def upload_file(request):
 #     return render(request, 'upload.html', {'form': form})
     return HttpResponse(intent)
 
-def handle_uploaded_file(f,n):
+def handle_uploaded_file(f,n,type):
     print "in hndling upload"
     fname=n+str(randrange(0,100))+'.webm'
     # saving
@@ -68,7 +73,22 @@ def handle_uploaded_file(f,n):
         print "done saving"
     # converting
     converter(fname)
-    intent = getIntent(fname)
+    if (type == 'nn') :
+        intent = getIntent(fname)
+    else :
+        wavFile = "/home/ranula/Desktop/Demo/ENV/FYPDemoBackEnd/audio/wav/"+fname.split('.')[0]+".wav"
+        wave, sr = librosa.load(wavFile, mono=True, sr=None)
+        print(sr)
+        wave16k = librosa.resample(wave, sr, 16000)
+        librosa.output.write_wav(wavFile, wave16k, 16000)
+        data, samplerate = soundfile.read(wavFile)
+        print(samplerate)
+        soundfile.write(wavFile, data, samplerate, subtype='PCM_16')
+        intent = IntentClasify.getIntent(wavFile)
+        # IntentClasify.main()
+    
+    
+
     print ("Intent is")
     print(intent)
     return intent
@@ -109,7 +129,7 @@ def write_mffcc(mfcc_f):
 def getIntent(fname):
     global model
     if (model == 0) :
-        model = load_model('model/71_%.hd5')
+        model = load_model('model/74_86%.hd5')
         graph = tf.get_default_graph()
         maxSize= 949
         wave, sr = librosa.load("audio/wav/"+fname.split('.')[0]+".wav", mono=True, sr=None)
@@ -125,6 +145,8 @@ def getIntent(fname):
             global graph
             with graph.as_default():
                 intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
+                a = (model.predict_proba(np.array( [mfcc_f,] )))
+                print(a)
                 return intent
         else:
             return "-1"
@@ -144,6 +166,8 @@ def getIntent(fname):
             global graph
             with graph.as_default():
                 intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
+                a = (model.predict_proba(np.array( [mfcc_f,] )))
+                print(a)
                 return intent
         else:
             return "-1"

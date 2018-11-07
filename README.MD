@@ -1,3 +1,11 @@
+Django Installment 
+
+http://exponential.io/blog/2015/02/10/install-virtualenv-and-virtualenvwrapper-on-ubuntu/
+
+install python
+pip install django
+
+
 Backend
 
 pip install virtualenv
