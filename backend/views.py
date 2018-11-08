@@ -73,8 +73,12 @@ def handle_uploaded_file(f,n,type):
         print "done saving"
     # converting
     converter(fname)
+    intentList=[]
     if (type == 'nn') :
-        intent = getIntent(fname)
+        intent,prob = getIntent(fname)
+        intentList.append(intent)
+        intentList.append(",")
+        intentList.append(prob)
     else :
         wavFile = "/home/ranula/Desktop/Demo/ENV/FYPDemoBackEnd/audio/wav/"+fname.split('.')[0]+".wav"
         wave, sr = librosa.load(wavFile, mono=True, sr=None)
@@ -84,14 +88,17 @@ def handle_uploaded_file(f,n,type):
         data, samplerate = soundfile.read(wavFile)
         print(samplerate)
         soundfile.write(wavFile, data, samplerate, subtype='PCM_16')
-        intent = IntentClasify.getIntent(wavFile)
+        intent,text = IntentClasify.getIntent(wavFile)
+        intentList.append(intent)
+        intentList.append(",")
+        intentList.append(text)
         # IntentClasify.main()
     
     
 
     print ("Intent is")
-    print(intent)
-    return intent
+    print(intentList)
+    return intentList
 
 def converter(fname):
     print(fname.split('.')[0])
@@ -147,9 +154,12 @@ def getIntent(fname):
                 intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
                 a = (model.predict_proba(np.array( [mfcc_f,] )))
                 print(a)
-                return intent
+                maxProb = max(max(a))
+                print(maxProb)
+
+                return intent,maxProb
         else:
-            return "-1"
+            return "-1",0
 
     else:
         maxSize= 949
@@ -168,9 +178,12 @@ def getIntent(fname):
                 intent = str((model.predict_classes(np.array( [mfcc_f,] )))[0] + 1 )
                 a = (model.predict_proba(np.array( [mfcc_f,] )))
                 print(a)
-                return intent
+                maxProb = max(max(a))
+                print(maxProb)
+
+                return intent,maxProb
         else:
-            return "-1"
+            return "-1",0
 
 
     
